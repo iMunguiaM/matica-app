@@ -13,25 +13,10 @@ import {
   CheckCircle2,
   Sparkles
 } from 'lucide-react';
+import { historyCapsules } from './data/historyCapsules';
+import { generateQuestions } from './lib/generateQuestions';
+import type { Question, View } from './types/app';
 
-// --- DATOS DE LA APLICACIÓN ---
-const historyCapsules = [
-  { title: "El Origen del Cero", character: "Sabios de la India", fact: "Hace más de 1,500 años se inventó el 'cero'. ¡Sin él, no habría internet!", emoji: "🇮🇳" },
-  { title: "Pitágoras", character: "Escuela Griega", fact: "Creía que todo el universo estaba hecho de números. ¡Un club de genios!", emoji: "📐" },
-  { title: "Ábaco Mágico", character: "Comerciantes", fact: "La primera calculadora. ¡Muchos expertos son más veloces que una computadora!", emoji: "🧮" },
-  { title: "Ada Lovelace", character: "La Programadora", fact: "Creó las primeras instrucciones para máquinas. ¡Unió poesía y matemáticas!", emoji: "💻" }
-];
-
-// --- TIPOS ---
-type View = 'landing' | 'learn' | 'learn_content' | 'quiz' | 'results';
-
-type Question = {
-  q: string;
-  a: number;
-  options: number[];
-  hint: string;
-  solution: string;
-};
 
 // --- COMPONENTE PRINCIPAL ---
 export default function App() {
@@ -45,79 +30,6 @@ export default function App() {
   const [attempts, setAttempts] = useState(0);
   const [isCorrect, setIsCorrect] = useState(false);
 
-  // Generador de ejercicios dinámicos por nivel
-  const generateQuestions = (level: number): Question[] => {
-    const qList: Question[] = [];
-    for (let i = 0; i < 20; i++) {
-      let q = '';
-      let a = 0;
-      let hint = '';
-      let solution = '';
-      
-      switch(level) {
-        case 1: { 
-          const n1 = Math.floor(Math.random() * 30) + 10;
-          const n2 = Math.floor(Math.random() * 5) + 2;
-          const n3 = Math.floor(Math.random() * 5) + 2;
-          q = `${n1} + ${n2} × ${n3}`;
-          a = n1 + (n2 * n3);
-          hint = `La multiplicación es como una "unión fuerte" entre números. Por eso, debes resolver ${n2} × ${n3} antes de sumar los demás.`;
-          solution = `Primero resolvemos el bloque de multiplicación: ${n2} × ${n3} = ${n2*n3}. Luego sumamos ${n1} + ${n2*n3} para obtener ${a}.`;
-          break;
-        }
-        case 2: {
-          const n1 = Math.floor(Math.random() * 100) + 50;
-          const n2 = Math.floor(Math.random() * 9) + 3;
-          const n3 = Math.floor(Math.random() * 9) + 3;
-          q = `${n1} + ${n2} × ${n3}`;
-          a = n1 + (n2 * n3);
-          hint = `¡No te dejes engañar por el orden! La multiplicación tiene más "fuerza" y debe resolverse antes que cualquier suma.`;
-          solution = `Siguiendo la regla, resolvemos el bloque: ${n2} × ${n3} = ${n2*n3}. Finalmente sumamos ${n1} y obtenemos ${a}.`;
-          break;
-        }
-        case 3: {
-          const d2 = Math.floor(Math.random() * 5) + 2;
-          const d1 = d2 * (Math.floor(Math.random() * 10) + 2);
-          const add = Math.floor(Math.random() * 50) + 50;
-          q = `${d1} ÷ ${d2} + ${add}`;
-          a = (d1 / d2) + add;
-          hint = `Dividir es repartir, y en matemáticas repartir es una prioridad. Calcula cuánto es ${d1} entre ${d2} antes de sumar.`;
-          solution = `Primero repartimos: ${d1} ÷ ${d2} = ${d1/d2}. Ahora sumamos esa cantidad a ${add} para obtener ${a}.`;
-          break;
-        }
-        case 4: {
-          const sub = Math.floor(Math.random() * 100) + 200;
-          const d2 = Math.floor(Math.random() * 7) + 2;
-          const d1 = d2 * (Math.floor(Math.random() * 10) + 5);
-          q = `${sub} - ${d1} ÷ ${d2}`;
-          a = sub - (d1 / d2);
-          hint = `La división siempre se resuelve antes que la resta. Necesitas saber el resultado de la repartición (${d1} ÷ ${d2}) para poder quitárselo a ${sub}.`;
-          solution = `Calculamos la división prioritaria: ${d1} ÷ ${d2} = ${d1/d2}. Ahora restamos ese valor al número inicial: ${sub} - ${d1/d2} = ${a}.`;
-          break;
-        }
-        case 5: {
-          const sub = Math.floor(Math.random() * 200) + 300;
-          const m1 = Math.floor(Math.random() * 12) + 5;
-          const m2 = Math.floor(Math.random() * 10) + 5;
-          q = `${sub} - ${m1} × ${m2}`;
-          a = sub - (m1 * m2);
-          hint = `En los desafíos grandes, la multiplicación crea un bloque inseparable. Resuelve ${m1} × ${m2} primero para saber qué cantidad restar.`;
-          solution = `Resolvemos el bloque principal: ${m1} × ${m2} = ${m1*m2}. Luego realizamos la resta final: ${sub} - ${m1*m2} = ${a}.`;
-          break;
-        }
-        default: break;
-      }
-      
-      const options = [a];
-      while (options.length < 4) {
-        const wrong = a + (Math.floor(Math.random() * 40) - 20);
-        if (!options.includes(wrong) && wrong > 0) options.push(wrong);
-      }
-      qList.push({ q, a, options: options.sort(() => Math.random() - 0.5), hint, solution });
-    }
-    return qList;
-  };
-
   const startQuiz = () => {
     const q = generateQuestions(selectedLevel);
     setQuestions(q);
@@ -130,10 +42,10 @@ export default function App() {
   };
 
   const handleOptionClick = (opt: number) => {
-    if (showFeedback) return;
+    if (showFeedback || !currentQuestion) return;
     
     setSelectedOption(opt);
-    const correct = opt === questions[currentQuestionIdx].a;
+    const correct = opt === currentQuestion.a;
     setIsCorrect(correct);
     
     if (correct) {
@@ -167,6 +79,8 @@ export default function App() {
     setShowFeedback(false);
     setAttempts(0);
   };
+
+  const currentQuestion = questions[currentQuestionIdx] ?? null;
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-slate-800 flex flex-col items-center justify-center p-4 font-sans">
@@ -307,7 +221,24 @@ export default function App() {
       )}
 
       {/* VISTA 4: QUIZ / EJERCICIOS */}
-      {view === 'quiz' && (
+      {view === 'quiz' && !currentQuestion && (
+        <div className="w-full max-w-xl bg-white rounded-[40px] p-10 text-center border-2 border-slate-100 shadow-sm">
+          <h2 className="text-3xl font-black text-slate-900 mb-4">
+            No hay ejercicios cargados
+          </h2>
+          <p className="text-slate-500 font-bold mb-8">
+            Vuelve al inicio y comienza nuevamente el nivel.
+          </p>
+          <button
+            onClick={resetToHome}
+            className="bg-blue-600 text-white font-black py-4 px-10 rounded-[32px] shadow-[0_6px_0_0_#1e40af] active:translate-y-1 active:shadow-none transition-all"
+          >
+            VOLVER AL INICIO
+          </button>
+        </div>
+      )}
+
+      {view === 'quiz' && currentQuestion && (
         <div className="w-full max-w-2xl animate-in fade-in duration-300">
           {/* Barra de progreso */}
           <div className="mb-8 flex items-center gap-4">
@@ -326,7 +257,7 @@ export default function App() {
               NIVEL {selectedLevel} • DESAFÍO {currentQuestionIdx + 1}
             </p>
             <h3 className="text-6xl md:text-7xl font-black text-slate-900 tracking-tighter mb-6 leading-tight">
-              {questions[currentQuestionIdx].q} = <span className="text-blue-600">?</span>
+              {currentQuestion.q} = <span className="text-blue-600">?</span>
             </h3>
             <div className="flex justify-center gap-2 text-amber-500 font-bold text-sm bg-amber-50 py-2 px-4 rounded-full inline-flex items-center">
               <Lightbulb size={18} /> 
@@ -336,14 +267,14 @@ export default function App() {
 
           {/* Opciones de respuesta */}
           <div className="grid grid-cols-2 gap-4 mb-8">
-            {questions[currentQuestionIdx].options.map((opt, i) => (
+            {currentQuestion.options.map((opt, i) => (
               <button
                 key={i}
                 onClick={() => handleOptionClick(opt)}
                 disabled={showFeedback}
                 className={`p-8 rounded-[36px] text-4xl font-black border-4 transition-all hover:scale-105 active:scale-95 ${
                   selectedOption === opt
-                    ? opt === questions[currentQuestionIdx].a
+                    ? opt === currentQuestion.a
                       ? 'bg-green-100 border-green-500 text-green-700'
                       : 'bg-red-100 border-red-500 text-red-700 animate-bounce' // Pequeña animación de error
                     : 'bg-white border-slate-100 text-slate-700 hover:border-blue-300 shadow-[0_8px_0_0_#F1F5F9]'
@@ -373,8 +304,8 @@ export default function App() {
                 
                 <p className="text-xl font-bold mb-8 leading-tight opacity-95 text-left leading-relaxed">
                   {isCorrect || attempts >= 3 
-                    ? questions[currentQuestionIdx].solution 
-                    : questions[currentQuestionIdx].hint
+                    ? currentQuestion.solution 
+                    : currentQuestion.hint
                   }
                 </p>
 

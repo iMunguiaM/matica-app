@@ -22,3 +22,154 @@ body,
 button {
   -webkit-tap-highlight-color: transparent;
 }
+
+
+/* responsive-mobile-v1 */
+html,
+body {
+  overflow-x: hidden;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+@media (max-width: 767px) {
+  #root > div {
+    width: 100%;
+    min-height: 100svh;
+    justify-content: flex-start !important;
+    padding: 16px 14px 20px !important;
+  }
+
+  .max-w-4xl,
+  .max-w-3xl,
+  .max-w-2xl,
+  .max-w-xl,
+  .max-w-lg,
+  .max-w-md {
+    max-width: 100% !important;
+  }
+
+  button.fixed {
+    top: 12px !important;
+    right: 12px !important;
+    padding: 10px !important;
+  }
+
+  .text-7xl {
+    font-size: 3rem !important;
+    line-height: 1 !important;
+  }
+
+  .text-6xl {
+    font-size: clamp(2.35rem, 12vw, 3.75rem) !important;
+    line-height: 1.05 !important;
+  }
+
+  .text-5xl {
+    font-size: clamp(1.85rem, 9vw, 3rem) !important;
+    line-height: 1.05 !important;
+  }
+
+  .text-4xl {
+    font-size: clamp(1.65rem, 7vw, 2.25rem) !important;
+    line-height: 1.12 !important;
+  }
+
+  .text-3xl {
+    font-size: clamp(1.45rem, 6vw, 1.875rem) !important;
+    line-height: 1.15 !important;
+  }
+
+  .text-2xl {
+    font-size: clamp(1.2rem, 5.5vw, 1.5rem) !important;
+    line-height: 1.2 !important;
+  }
+
+  .text-xl {
+    font-size: 1.05rem !important;
+    line-height: 1.55 !important;
+  }
+
+  .text-lg {
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .p-12,
+  .p-10 {
+    padding: 1.5rem !important;
+  }
+
+  .p-8 {
+    padding: 1.25rem !important;
+  }
+
+  .p-6 {
+    padding: 1rem !important;
+  }
+
+  .px-16,
+  .px-10 {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+
+  .py-6,
+  .py-5 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+
+  .mb-12 {
+    margin-bottom: 2rem !important;
+  }
+
+  .mb-10 {
+    margin-bottom: 1.75rem !important;
+  }
+
+  .mb-8 {
+    margin-bottom: 1.5rem !important;
+  }
+
+  [class*="rounded-[64px]"],
+  [class*="rounded-[56px]"],
+  [class*="rounded-[48px]"],
+  [class*="rounded-[40px]"],
+  [class*="rounded-[36px]"],
+  [class*="rounded-[32px]"] {
+    border-radius: 1.5rem !important;
+  }
+
+  button[class*="text-4xl"] {
+    min-height: 5.25rem;
+    padding: 1.25rem !important;
+    font-size: clamp(1.6rem, 9vw, 2.5rem) !important;
+  }
+
+  footer {
+    width: 100%;
+    margin-top: 2rem !important;
+    padding-bottom: 1rem !important;
+    text-align: center;
+    letter-spacing: 0.18em !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .grid.grid-cols-2 {
+    gap: 0.65rem !important;
+  }
+
+  button[class*="text-4xl"] {
+    min-height: 4.75rem;
+    font-size: 1.65rem !important;
+  }
+
+  .flex.gap-6.mb-12.text-left {
+    flex-direction: column !important;
+  }
+}
+

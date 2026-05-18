@@ -19,14 +19,9 @@ import { generateQuestions } from './lib/generateQuestions';
 import type { Question, View } from './types/app';
 
 type GameMode = 'calm' | 'turbo';
+type TurboSeconds = 5 | 10 | 15;
 
-const TURBO_TIME_BY_LEVEL: Record<number, number> = {
-  1: 20,
-  2: 18,
-  3: 15,
-  4: 12,
-  5: 10,
-};
+const TURBO_SECOND_OPTIONS: TurboSeconds[] = [5, 10, 15];
 
 
 // --- COMPONENTE PRINCIPAL ---
@@ -34,6 +29,7 @@ export default function App() {
   const [view, setView] = useState<View>('landing');
   const [selectedLevel, setSelectedLevel] = useState(1);
   const [gameMode, setGameMode] = useState<GameMode>('calm');
+  const [turboSeconds, setTurboSeconds] = useState<TurboSeconds>(10);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -41,11 +37,11 @@ export default function App() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [isCorrect, setIsCorrect] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(TURBO_TIME_BY_LEVEL[1]);
+  const [timeLeft, setTimeLeft] = useState<number>(10);
   const [timeExpired, setTimeExpired] = useState(false);
   const [fastAnswers, setFastAnswers] = useState(0);
 
-  const selectedTimeLimit = TURBO_TIME_BY_LEVEL[selectedLevel] ?? 15;
+  const selectedTimeLimit = gameMode === 'turbo' ? turboSeconds : 15;
   const currentQuestion = questions[currentQuestionIdx] ?? null;
   const timeProgress = gameMode === 'turbo'
     ? Math.max(0, Math.min(100, (timeLeft / selectedTimeLimit) * 100))
@@ -59,7 +55,7 @@ export default function App() {
     if (gameMode !== 'turbo' || view !== 'quiz' || !currentQuestion || showFeedback) return;
 
     const timer = window.setInterval(() => {
-      setTimeLeft((previousTime) => {
+      setTimeLeft((previousTime: number) => {
         if (previousTime <= 1) {
           window.clearInterval(timer);
           setSelectedOption(null);
@@ -212,22 +208,58 @@ export default function App() {
               </span>
             </button>
 
-            <button
-              onClick={() => setGameMode('turbo')}
-              className={`rounded-[24px] p-4 border-4 transition-all text-left flex items-center gap-4 ${
+            <div
+              className={`rounded-[24px] p-4 border-4 transition-all text-left ${
                 gameMode === 'turbo'
                   ? 'bg-yellow-50 border-yellow-400 shadow-sm'
                   : 'bg-slate-50 border-transparent hover:border-yellow-100'
               }`}
             >
-              <span className="bg-yellow-400 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-md shrink-0">
-                <Zap size={26} fill="currentColor" />
-              </span>
-              <span>
-                <span className="block font-black text-slate-900 text-lg">Reto Relámpago</span>
-                <span className="block text-slate-400 font-bold text-sm">{selectedTimeLimit}s por ejercicio</span>
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setGameMode('turbo')}
+                className="w-full flex items-center gap-4 text-left"
+              >
+                <span className="bg-yellow-400 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-md shrink-0">
+                  <Zap size={26} fill="currentColor" />
+                </span>
+
+                <span className="flex-1">
+                  <span className="block font-black text-slate-900 text-lg">Reto Relámpago</span>
+                  <span className="block text-slate-400 font-bold text-sm">
+                    {gameMode === 'turbo' ? `Velocidad: ${turboSeconds}s` : 'Elige tu velocidad'}
+                  </span>
+                </span>
+              </button>
+
+              {gameMode === 'turbo' && (
+                <div className="mt-4 pt-4 border-t border-yellow-200 animate-in fade-in slide-in-from-top-1 duration-300">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-600 mb-3">
+                    Elige tu velocidad
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {TURBO_SECOND_OPTIONS.map((seconds) => (
+                      <button
+                        key={seconds}
+                        type="button"
+                        onClick={() => {
+                          setGameMode('turbo');
+                          setTurboSeconds(seconds);
+                        }}
+                        className={`py-3 rounded-2xl font-black text-sm transition-all border-2 ${
+                          turboSeconds === seconds
+                            ? 'bg-yellow-400 text-white border-yellow-500 shadow-md scale-[1.03]'
+                            : 'bg-white text-slate-500 border-yellow-100 hover:border-yellow-300'
+                        }`}
+                      >
+                        {seconds}s ⚡
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
@@ -478,7 +510,7 @@ export default function App() {
                   <Zap size={26} fill="currentColor" />
                 </div>
                 <div>
-                  <p className="text-yellow-600 text-xs font-black uppercase tracking-widest">Reto Relámpago</p>
+                  <p className="text-yellow-600 text-xs font-black uppercase tracking-widest">Reto Relámpago de {turboSeconds}s</p>
                   <p className="text-slate-800 font-black text-xl">{fastAnswers} respuestas súper rápidas</p>
                 </div>
               </div>

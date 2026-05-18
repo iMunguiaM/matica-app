@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Zap, 
   Home, 
@@ -11,17 +11,29 @@ import {
   RotateCcw,
   XCircle,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Timer
 } from 'lucide-react';
 import { historyCapsules } from './data/historyCapsules';
 import { generateQuestions } from './lib/generateQuestions';
 import type { Question, View } from './types/app';
+
+type GameMode = 'calm' | 'turbo';
+
+const TURBO_TIME_BY_LEVEL: Record<number, number> = {
+  1: 20,
+  2: 18,
+  3: 15,
+  4: 12,
+  5: 10,
+};
 
 
 // --- COMPONENTE PRINCIPAL ---
 export default function App() {
   const [view, setView] = useState<View>('landing');
   const [selectedLevel, setSelectedLevel] = useState(1);
+  const [gameMode, setGameMode] = useState<GameMode>('calm');
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -29,27 +41,75 @@ export default function App() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(TURBO_TIME_BY_LEVEL[1]);
+  const [timeExpired, setTimeExpired] = useState(false);
+  const [fastAnswers, setFastAnswers] = useState(0);
+
+  const selectedTimeLimit = TURBO_TIME_BY_LEVEL[selectedLevel] ?? 15;
+  const currentQuestion = questions[currentQuestionIdx] ?? null;
+  const timeProgress = gameMode === 'turbo'
+    ? Math.max(0, Math.min(100, (timeLeft / selectedTimeLimit) * 100))
+    : 100;
+
+  useEffect(() => {
+    setTimeLeft(selectedTimeLimit);
+  }, [selectedTimeLimit]);
+
+  useEffect(() => {
+    if (gameMode !== 'turbo' || view !== 'quiz' || !currentQuestion || showFeedback) return;
+
+    const timer = window.setInterval(() => {
+      setTimeLeft((previousTime) => {
+        if (previousTime <= 1) {
+          window.clearInterval(timer);
+          setSelectedOption(null);
+          setIsCorrect(false);
+          setTimeExpired(true);
+          setAttempts((previousAttempts) => previousAttempts + 1);
+          setShowFeedback(true);
+          return 0;
+        }
+
+        return previousTime - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [gameMode, view, currentQuestion, showFeedback]);
+
+  const resetTimer = () => {
+    setTimeLeft(selectedTimeLimit);
+    setTimeExpired(false);
+  };
 
   const startQuiz = () => {
     const q = generateQuestions(selectedLevel);
     setQuestions(q);
     setScore(0);
+    setFastAnswers(0);
     setCurrentQuestionIdx(0);
     setAttempts(0);
     setView('quiz');
     setShowFeedback(false);
     setSelectedOption(null);
+    resetTimer();
   };
 
   const handleOptionClick = (opt: number) => {
     if (showFeedback || !currentQuestion) return;
     
     setSelectedOption(opt);
+    setTimeExpired(false);
     const correct = opt === currentQuestion.a;
     setIsCorrect(correct);
     
     if (correct) {
-      if (attempts === 0) setScore(s => s + 1);
+      if (attempts === 0) {
+        setScore(s => s + 1);
+        if (gameMode === 'turbo' && timeLeft >= Math.ceil(selectedTimeLimit / 2)) {
+          setFastAnswers((total) => total + 1);
+        }
+      }
       setShowFeedback(true);
     } else {
       setAttempts(prev => prev + 1);
@@ -62,6 +122,7 @@ export default function App() {
       setShowFeedback(false);
       setSelectedOption(null);
       setAttempts(0);
+      resetTimer();
       if (currentQuestionIdx + 1 < questions.length) {
         setCurrentQuestionIdx(prev => prev + 1);
       } else {
@@ -70,6 +131,7 @@ export default function App() {
     } else {
       setShowFeedback(false);
       setSelectedOption(null);
+      resetTimer();
     }
   };
 
@@ -78,9 +140,8 @@ export default function App() {
     setSelectedOption(null);
     setShowFeedback(false);
     setAttempts(0);
+    resetTimer();
   };
-
-  const currentQuestion = questions[currentQuestionIdx] ?? null;
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-slate-800 flex flex-col items-center justify-center p-4 font-sans">
@@ -112,7 +173,7 @@ export default function App() {
             Selecciona tu nivel y conviértete en un maestro del cálculo mental.
           </p>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-12 max-w-3xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 max-w-3xl mx-auto">
             {[1, 2, 3, 4, 5].map((lvl) => (
               <button 
                 key={lvl}
@@ -133,6 +194,40 @@ export default function App() {
                 </span>
               </button>
             ))}
+          </div>
+
+          <div className="bg-white border-2 border-slate-100 p-3 rounded-[32px] shadow-sm max-w-2xl mx-auto mb-8 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <button
+              onClick={() => setGameMode('calm')}
+              className={`rounded-[24px] p-4 border-4 transition-all text-left flex items-center gap-4 ${
+                gameMode === 'calm'
+                  ? 'bg-green-50 border-green-400 shadow-sm'
+                  : 'bg-slate-50 border-transparent hover:border-green-100'
+              }`}
+            >
+              <span className="text-3xl">🐢</span>
+              <span>
+                <span className="block font-black text-slate-900 text-lg">Modo tranquilo</span>
+                <span className="block text-slate-400 font-bold text-sm">Practica sin límite</span>
+              </span>
+            </button>
+
+            <button
+              onClick={() => setGameMode('turbo')}
+              className={`rounded-[24px] p-4 border-4 transition-all text-left flex items-center gap-4 ${
+                gameMode === 'turbo'
+                  ? 'bg-yellow-50 border-yellow-400 shadow-sm'
+                  : 'bg-slate-50 border-transparent hover:border-yellow-100'
+              }`}
+            >
+              <span className="bg-yellow-400 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-md shrink-0">
+                <Zap size={26} fill="currentColor" />
+              </span>
+              <span>
+                <span className="block font-black text-slate-900 text-lg">Reto Relámpago</span>
+                <span className="block text-slate-400 font-bold text-sm">{selectedTimeLimit}s por ejercicio</span>
+              </span>
+            </button>
           </div>
 
           <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
@@ -188,9 +283,12 @@ export default function App() {
             <div className="bg-blue-50 p-6 rounded-full inline-block text-blue-600 mb-8">
               <BookOpen size={64} />
             </div>
-            <h2 className="text-4xl font-black text-slate-900 mb-6 uppercase tracking-tight italic">
+            <h2 className="text-4xl font-black text-slate-900 mb-4 uppercase tracking-tight italic">
               Prepárate para el Nivel {selectedLevel}
             </h2>
+            <div className={`inline-flex items-center gap-2 mb-6 px-5 py-2 rounded-full font-black text-sm ${gameMode === 'turbo' ? 'bg-yellow-50 text-yellow-600' : 'bg-green-50 text-green-600'}`}>
+              {gameMode === 'turbo' ? <><Timer size={18} /> Reto Relámpago: {selectedTimeLimit}s</> : <>🐢 Modo tranquilo</>}
+            </div>
             
             <div className="bg-slate-50 p-8 rounded-[40px] border-2 border-slate-100 text-left mb-10 space-y-6">
               <div className="flex items-start gap-4">
@@ -241,7 +339,7 @@ export default function App() {
       {view === 'quiz' && currentQuestion && (
         <div className="w-full max-w-2xl animate-in fade-in duration-300">
           {/* Barra de progreso */}
-          <div className="mb-8 flex items-center gap-4">
+          <div className="mb-6 flex items-center gap-4">
             <div className="flex-1 bg-slate-100 h-4 rounded-full overflow-hidden border border-slate-200">
               <div 
                 className="bg-green-500 h-full transition-all duration-1000 ease-out" 
@@ -250,6 +348,27 @@ export default function App() {
             </div>
             <span className="font-black text-slate-400 text-sm italic">{currentQuestionIdx + 1}/20</span>
           </div>
+
+          {gameMode === 'turbo' && (
+            <div className="bg-white rounded-[28px] border-2 border-slate-100 p-3 mb-6 shadow-sm animate-in fade-in duration-300">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="bg-yellow-400 text-white w-10 h-10 rounded-2xl flex items-center justify-center shadow-md">
+                  <Timer size={22} />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400">Energía relámpago</p>
+                  <p className="text-lg font-black text-slate-800">{timeLeft}s restantes</p>
+                </div>
+                <span className="text-yellow-500 font-black text-xl">⚡</span>
+              </div>
+              <div className="bg-yellow-50 h-4 rounded-full overflow-hidden border border-yellow-100">
+                <div
+                  className={`h-full rounded-full transition-all duration-1000 ${timeLeft <= 5 ? 'bg-red-500' : 'bg-yellow-400'}`}
+                  style={{ width: `${timeProgress}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
 
           {/* Tarjeta de Pregunta */}
           <div className="bg-white rounded-[56px] p-10 shadow-sm border-2 border-slate-100 text-center mb-8 relative overflow-hidden">
@@ -291,21 +410,25 @@ export default function App() {
               <div className={`w-full max-w-md p-10 rounded-[48px] border-b-[12px] shadow-2xl animate-in slide-in-from-bottom-12 duration-500 ${
                 isCorrect 
                 ? 'bg-green-500 border-green-700 text-white' 
-                : 'bg-red-500 border-red-700 text-white'
+                : timeExpired
+                  ? 'bg-yellow-500 border-yellow-700 text-white'
+                  : 'bg-red-500 border-red-700 text-white'
               }`}>
                 <div className="flex items-center gap-4 mb-4 text-left">
                   <div className="shrink-0">
-                    {isCorrect ? <CheckCircle2 size={40} /> : <XCircle size={40} />}
+                    {isCorrect ? <CheckCircle2 size={40} /> : timeExpired ? <Timer size={40} /> : <XCircle size={40} />}
                   </div>
                   <h4 className="text-3xl font-black uppercase italic leading-tight">
-                    {isCorrect ? '¡Magnífico!' : attempts >= 3 ? '¡Sigue aprendiendo!' : '¡Oops! Fíjate bien'}
+                    {isCorrect ? '¡Magnífico!' : timeExpired ? '¡Se acabó la energía!' : attempts >= 3 ? '¡Sigue aprendiendo!' : '¡Oops! Fíjate bien'}
                   </h4>
                 </div>
                 
                 <p className="text-xl font-bold mb-8 leading-tight opacity-95 text-left leading-relaxed">
                   {isCorrect || attempts >= 3 
                     ? currentQuestion.solution 
-                    : currentQuestion.hint
+                    : timeExpired
+                      ? `Respira. Mira la pista y vuelve a intentarlo: ${currentQuestion.hint}`
+                      : currentQuestion.hint
                   }
                 </p>
 
@@ -338,7 +461,7 @@ export default function App() {
             <h2 className="text-4xl font-black text-slate-900 mb-2 uppercase tracking-tight">¡NIVEL {selectedLevel} COMPLETADO!</h2>
             <p className="text-slate-400 font-bold text-lg mb-10 italic">Tu mente es más rápida que un rayo.</p>
             
-            <div className="flex gap-6 mb-12 text-left">
+            <div className="flex gap-6 mb-8 text-left">
               <div className="flex-1 bg-blue-50 p-8 rounded-[40px] border-b-8 border-blue-200">
                 <p className="text-blue-500 text-xs font-black uppercase mb-2 tracking-widest">Aciertos</p>
                 <p className="text-5xl font-black text-blue-900">{score}/20</p>
@@ -348,6 +471,18 @@ export default function App() {
                 <p className="text-5xl font-black text-blue-900">{Math.round((score/20)*100)}%</p>
               </div>
             </div>
+
+            {gameMode === 'turbo' && (
+              <div className="bg-yellow-50 border-2 border-yellow-100 rounded-[32px] p-5 mb-8 text-left flex items-center gap-4">
+                <div className="bg-yellow-400 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-md shrink-0">
+                  <Zap size={26} fill="currentColor" />
+                </div>
+                <div>
+                  <p className="text-yellow-600 text-xs font-black uppercase tracking-widest">Reto Relámpago</p>
+                  <p className="text-slate-800 font-black text-xl">{fastAnswers} respuestas súper rápidas</p>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4">
               <button 
